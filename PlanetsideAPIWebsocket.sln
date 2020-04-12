@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.960
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlanetsideAPIWebsocket", "PlanetsideAPIWebsocket\PlanetsideAPIWebsocket.csproj", "{38D35714-7955-4F36-A11B-C6AA5F8DC42B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0} = {81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonParser", "JsonParser\JsonParser.csproj", "{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{38D35714-7955-4F36-A11B-C6AA5F8DC42B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38D35714-7955-4F36-A11B-C6AA5F8DC42B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38D35714-7955-4F36-A11B-C6AA5F8DC42B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38D35714-7955-4F36-A11B-C6AA5F8DC42B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {88D03A12-14C5-4ED4-87C6-EF99F1224D21}
+	EndGlobalSection
+EndGlobal
