@@ -8,7 +8,7 @@ Usage:
 TODO:
 -----
 + make it more error-proof (reconnect to API stream if connection lost)
-+ __add spot kills and more to tracker__
++ ~~__add spot kills and more to tracker__~~ (done)
 + __add killstreaks, multikills etc. notices__
 + add cache timeout for players? for long-running program uses
 + player online time is not always correct in multithreaded environment (one thread registers him as offline before another thread registers him online with earlier timestamp)
@@ -27,3 +27,6 @@ Notes:
   After 30 minutes, 1100 players cached (~1700 playing at that time).
 
 * Vehicle kills does not count turret kills (glaive too)
+
+Statistics counter diagram:
+![alt text](https://github.com/Georgiks/PlanetsideOutfitTracker/blob/master/StatisticsDiagram.png "How different stats include other stats")

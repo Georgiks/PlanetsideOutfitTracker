@@ -342,6 +342,7 @@ namespace PlanetsideAPIWebsocket
     {
         public enum Statistic {
             Kills,
+            ConventionalKills,
             Deaths,
             Assists,
             Teamkills,
@@ -386,7 +387,7 @@ namespace PlanetsideAPIWebsocket
 
 
         public TimeSpan OnlineTime
-        {
+        {   
             get
             {
                 if (OnlineSince.Ticks > 0) return OnlineTimespan + (DateTime.Now - OnlineSince);
@@ -463,6 +464,8 @@ namespace PlanetsideAPIWebsocket
                 else RegisterStatisticChange(Statistic.Teamkills);
                 if (record.victim.Outfit == record.attacker.Outfit) RegisterStatisticChange(Statistic.Outfitkills);
                 if (record.headshot && record.victim.Faction != record.attacker.Faction) RegisterStatisticChange(Statistic.HeadshotEnemyKills);
+                if (record.victim.Faction != record.attacker.Faction && record.weaponName != null && record.weaponName.IndexOf("Orbital Strike", StringComparison.OrdinalIgnoreCase) == -1 && record.attackerVehicle.Name == null)
+                    RegisterStatisticChange(Statistic.ConventionalKills);
             }
             else
             {
