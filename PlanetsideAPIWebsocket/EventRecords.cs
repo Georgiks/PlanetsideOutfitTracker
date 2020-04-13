@@ -223,7 +223,7 @@ namespace PlanetsideAPIWebsocket
         }
         public override string GetLogString()
         {
-            return LogRecordHelper(timestamp, "Logged in", whoFaction: character.Faction, whoOutfit: character.Outfit, whoName: character.Name);
+            return LogRecordHelper(timestamp, "Logged out", whoFaction: character.Faction, whoOutfit: character.Outfit, whoName: character.Name);
         }
     }
     sealed class PlayerLoginEventRecord : PlayerLoggingEventRecord
@@ -234,7 +234,7 @@ namespace PlanetsideAPIWebsocket
         }
         public override string GetLogString()
         {
-            return LogRecordHelper(timestamp, "Logged out", whoFaction: character.Faction, whoOutfit: character.Outfit, whoName: character.Name);
+            return LogRecordHelper(timestamp, "Logged in", whoFaction: character.Faction, whoOutfit: character.Outfit, whoName: character.Name);
         }
     }
 
