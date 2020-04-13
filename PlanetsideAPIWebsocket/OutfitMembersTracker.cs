@@ -103,6 +103,13 @@ namespace PlanetsideAPIWebsocket
             events.Add(new JsonString("VehicleDestroy"));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdRevive));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadRevive));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdResupply));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadResupply));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdKillAssist));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdMAXRepair));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadMAXRepair));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSpotKill));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadSpotKill));
             string subscribeRequest = PS2APIEventUtils.GetSubscribeEvent(new JsonArray(players), new JsonArray(events)).ToString();
             await StreamingAPISocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(subscribeRequest)), WebSocketMessageType.Text, true, CancellationToken.None);
         }
@@ -177,6 +184,91 @@ namespace PlanetsideAPIWebsocket
             Console.WriteLine("Connected to socket");
         }
 
+        public async Task<KillEventRecord> ProcessDeathRecord(JsonObject payload)
+        {
+            OutfitMemberStatRecorder person;
+            KillEventRecord killRecord = await KillEventRecord.Parse(payload);
+
+            if (killRecord.attacker.Id != null && StatRecorders.TryGetValue(killRecord.attacker.Id, out person))
+            {
+                lock (person) person.RegisterDeathEvent(killRecord);
+            }
+            if (killRecord.victim.Id != null && killRecord.attacker.Id != killRecord.victim.Id && StatRecorders.TryGetValue(killRecord.victim.Id, out person))
+            {
+                lock (person) person.RegisterDeathEvent(killRecord);
+            }
+            return killRecord;
+        }
+        public async Task<ReviveEventRecord> ProcessReviveRecord(JsonObject payload, string xpId)
+        {
+            OutfitMemberStatRecorder person;
+            ReviveEventRecord expRecord;
+
+            if (xpId == PS2APIConstants.ExperienceIdSquadRevive)
+                expRecord = await ReviveEventRecord.Parse<SquadReviveEventRecord>(payload);
+            else
+                expRecord = await ReviveEventRecord.Parse<NonSquadReviveEventRecord>(payload);
+
+
+            if (expRecord.reviver.Id != null && StatRecorders.TryGetValue(expRecord.reviver.Id, out person))
+            {
+                lock (person) person.RegisterRevive(expRecord);
+            }
+            if (expRecord.revived.Id != null && expRecord.revived.Id != expRecord.reviver.Id && StatRecorders.TryGetValue(expRecord.revived.Id, out person))
+            {
+                lock (person) person.RegisterRevive(expRecord);
+            }
+            return expRecord;
+        }
+        public async Task<PlayerLoginEventRecord> ProcessLoginRecord(JsonObject payload)
+        {
+            OutfitMemberStatRecorder person;
+            PlayerLoginEventRecord loginRecord = await PlayerLoggingEventRecord.Parse<PlayerLoginEventRecord>(payload);
+
+            if (loginRecord.character.Id != null && StatRecorders.TryGetValue(loginRecord.character.Id, out person))
+            {
+                lock (person) person.SetOnline(loginRecord);
+            }
+            return loginRecord;
+        }
+        public async Task<PlayerLogoutEventRecord> ProcessLogoutRecord(JsonObject payload)
+        {
+            OutfitMemberStatRecorder person;
+            PlayerLogoutEventRecord logoutRecord = await PlayerLoggingEventRecord.Parse<PlayerLogoutEventRecord>(payload);
+
+            if (logoutRecord.character.Id != null && StatRecorders.TryGetValue(logoutRecord.character.Id, out person))
+            {
+                lock (person) person.SetOffline(logoutRecord);
+            }
+            return logoutRecord;
+        }
+        public async Task<VehicleDestroyedEventRecord> ProcessVehicleDestroyRecord(JsonObject payload)
+        {
+            OutfitMemberStatRecorder person;
+            VehicleDestroyedEventRecord vehicleRecord = await VehicleDestroyedEventRecord.Parse(payload);
+
+            if (vehicleRecord.attacker.Id != null && StatRecorders.TryGetValue(vehicleRecord.attacker.Id, out person))
+            {
+                lock (person) person.RegisterVehicleDestroyed(vehicleRecord);
+            }
+            if (vehicleRecord.victim.Id != null && vehicleRecord.victim.Id != vehicleRecord.attacker.Id && StatRecorders.TryGetValue(vehicleRecord.victim.Id, out person))
+            {
+                lock (person) person.RegisterVehicleDestroyed(vehicleRecord);
+            }
+            return vehicleRecord;
+        }
+        public async Task<MinorExperienceEventRecord> ProcessMinorExperienceRecord(JsonObject payload)
+        {
+            OutfitMemberStatRecorder person;
+            MinorExperienceEventRecord record = await MinorExperienceEventRecord.Parse(payload);
+            if (record.character.Id != null && StatRecorders.TryGetValue(record.character.Id, out person))
+            {
+                lock (person) person.RegisterMinorExperience(record);
+            }
+            return record;
+        }
+
+
         async Task ProcessEventMessage(JsonObject message)
         {
             string type = (message["type"] as JsonString)?.InnerString;
@@ -189,86 +281,46 @@ namespace PlanetsideAPIWebsocket
             //Program.Logger.Log("something", long.Parse((payload["timestamp"] as JsonString).InnerString));
             //return;
 
-            OutfitMemberStatRecorder person;
             EventRecord record;
             switch (eventType)
             {
                 case "Death":
-                    KillEventRecord killRecord = await KillEventRecord.Parse(payload);
-                    record = killRecord;
-                    
-                    if (killRecord.attacker.Id != null && StatRecorders.TryGetValue(killRecord.attacker.Id, out person))
-                    {
-                        lock (person) person.RegisterDeathEvent(killRecord);
-                    }
-                    if (killRecord.victim.Id != null && killRecord.attacker.Id != killRecord.victim.Id && StatRecorders.TryGetValue(killRecord.victim.Id, out person))
-                    {
-                        lock (person) person.RegisterDeathEvent(killRecord);
-                    }
+                    record = await ProcessDeathRecord(payload);
                     break;
                 case "GainExperience":
-                    ReviveEventRecord expRecord;
                     string xpId = (payload?["experience_id"] as JsonString)?.InnerString;
-                    if (xpId == PS2APIConstants.ExperienceIdRevive)
+                    if (xpId == PS2APIConstants.ExperienceIdRevive || xpId == PS2APIConstants.ExperienceIdSquadRevive)
                     {
-                        expRecord = await ReviveEventRecord.Parse<NonSquadReviveEventRecord>(payload);
+                        record = await ProcessReviveRecord(payload, xpId);
                     }
-                    else if (xpId == PS2APIConstants.ExperienceIdSquadRevive)
-                    {
-                        expRecord = await ReviveEventRecord.Parse<SquadReviveEventRecord>(payload);
-                    } else
+                    else if (MinorExperienceEventRecord.GetExperienceType(xpId) != MinorExperienceEventRecord.ExperienceType.Unknown) {
+                        record = await ProcessMinorExperienceRecord(payload);
+                    }
+                    else
                     {
                         Program.Logger.Log($"Received unknown experience gained! {xpId}");
-                        expRecord = null;
-                    }
-                    record = expRecord;
-                    
-                    if (expRecord.reviver.Id != null && StatRecorders.TryGetValue(expRecord.reviver.Id, out person))
-                    {
-                        lock (person) person.RegisterRevive(expRecord);
-                    }
-                    if (expRecord.revived.Id != null && expRecord.revived.Id != expRecord.reviver.Id && StatRecorders.TryGetValue(expRecord.revived.Id, out person))
-                    {
-                        lock (person) person.RegisterRevive(expRecord);
+                        record = null;
                     }
                     break;
                 case "PlayerLogin":
-                    PlayerLoginEventRecord loginRecord = await PlayerLoggingEventRecord.Parse<PlayerLoginEventRecord>(payload);
-                    record = loginRecord;
-                    
-                    if (loginRecord.character.Id != null && StatRecorders.TryGetValue(loginRecord.character.Id, out person))
-                    {
-                        lock (person) person.SetOnline(loginRecord);
-                    }
+                    record = await ProcessLoginRecord(payload);
                     break;
                 case "PlayerLogout":
-                    PlayerLogoutEventRecord logoutRecord = await PlayerLoggingEventRecord.Parse<PlayerLogoutEventRecord>(payload);
-                    record = logoutRecord;
-                    
-                    if (logoutRecord.character.Id != null && StatRecorders.TryGetValue(logoutRecord.character.Id, out person))
-                    {
-                        lock (person) person.SetOffline(logoutRecord);
-                    }
+                    record = await ProcessLogoutRecord(payload);
                     break;
                 case "VehicleDestroy":
-                    VehicleDestroyedEventRecord vehicleRecord = await VehicleDestroyedEventRecord.Parse(payload);
-                    record = vehicleRecord;
-                    
-                    if (vehicleRecord.attacker.Id != null && StatRecorders.TryGetValue(vehicleRecord.attacker.Id, out person))
-                    {
-                        lock (person) person.RegisterVehicleDestroyed(vehicleRecord);
-                    }
-                    if (vehicleRecord.victim.Id != null && vehicleRecord.victim.Id != vehicleRecord.attacker.Id && StatRecorders.TryGetValue(vehicleRecord.victim.Id, out person))
-                    {
-                        lock (person) person.RegisterVehicleDestroyed(vehicleRecord);
-                    }
+                    record = await ProcessVehicleDestroyRecord(payload);
                     break;
                 default:
                     Console.WriteLine($"Unknown event type! {eventType}");
                     record = null;
                     break;
             }
-            Program.Logger.Log(record?.ToString() ?? "Unknown", record.timestamp);
+
+            if (record != null && !(record is MinorExperienceEventRecord))
+            {
+                Program.Logger.Log(record.ToString(), record.timestamp);
+            }
         }
 
         public void DumpData()
@@ -291,10 +343,11 @@ namespace PlanetsideAPIWebsocket
         public enum Statistic {
             Kills,
             Deaths,
-            Outfitkills,
-            Outfitdeaths,
+            Assists,
             Teamkills,
+            Outfitkills,
             Teamdeaths,
+            Outfitdeaths,
             Revives,
             SquadRevives,
             OutfitRevives,
@@ -306,7 +359,10 @@ namespace PlanetsideAPIWebsocket
             VehiclesSelfDestroyed,
             TeamVehiclesDestroyed,
             OutfitVehiclesDestroyed,
-            HeadshotEnemyKills
+            HeadshotEnemyKills,
+            MAXRepairs,
+            SpotAssists,
+            ResuppliesPlayer
         }
         Dictionary<Statistic, int> StatsDictionary { get; } = new Dictionary<Statistic, int>();
         SortedSet<EventRecord> Events { get; } = new SortedSet<EventRecord>(Comparer<EventRecord>.Create((a,b) => (int)(a.timestamp - b.timestamp)));
@@ -454,6 +510,29 @@ namespace PlanetsideAPIWebsocket
             {
                 RegisterStatisticChange(Statistic.Revived);
             }
+            Events.Add(record);
+        }
+
+        public void RegisterMinorExperience(MinorExperienceEventRecord record)
+        {
+            switch (record.type)
+            {
+                case MinorExperienceEventRecord.ExperienceType.Assist:
+                    RegisterStatisticChange(Statistic.Assists);
+                    break;
+                case MinorExperienceEventRecord.ExperienceType.MAXRepair:
+                    RegisterStatisticChange(Statistic.MAXRepairs);
+                    break;
+                case MinorExperienceEventRecord.ExperienceType.Resupply:
+                    RegisterStatisticChange(Statistic.ResuppliesPlayer);
+                    break;
+                case MinorExperienceEventRecord.ExperienceType.SpotAssist:
+                    RegisterStatisticChange(Statistic.SpotAssists);
+                    break;
+                default:
+                    break;
+            }
+            // Minor events are not shown in event log ?
             Events.Add(record);
         }
     }

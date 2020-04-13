@@ -22,6 +22,13 @@ namespace PlanetsideAPIWebsocket
         public const string ExperienceIdSquadRevive = "53";
         public const string UnknownWeaponTranslate = "deadly view";
         public const string TurretVehicleTypeId = "7";
+        public const string ExperienceIdKillAssist = "2";
+        public const string ExperienceIdResupply = "34";
+        public const string ExperienceIdSquadResupply = "55";
+        public const string ExperienceIdSpotKill = "36";
+        public const string ExperienceIdSquadSpotKill = "54";
+        public const string ExperienceIdMAXRepair = "6";
+        public const string ExperienceIdSquadMAXRepair = "142";
     }
 
     public static class PS2APIUtils

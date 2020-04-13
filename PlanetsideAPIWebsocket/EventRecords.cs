@@ -122,11 +122,7 @@ namespace PlanetsideAPIWebsocket
             {
                 return $"{NameWithOutfit(attacker.Name, attacker.Outfit)} commited suicide";
             }
-            if (attackerVehicle.Name != null && weaponName == null)
-            {
-                return $"{NameWithOutfit(attacker.Name, attacker.Outfit)} in {attackerVehicle.Name} playing as {attackerLoadoutName} ran over {(victim.Faction == attacker.Faction ? "teammate " : "")}{NameWithOutfit(victim.Name, victim.Outfit)} playing as {victimLoadoutName}";
-            }
-            return $"{NameWithOutfit(attacker.Name, attacker.Outfit)}{(attackerVehicle.Name == null ? "" : " in " + attackerVehicle.Name)} playing as {attackerLoadoutName} {(victim.Faction == attacker.Faction ? "team" : "")}killed {NameWithOutfit(victim.Name, victim.Outfit)} playing as {victimLoadoutName} with {(weaponName == null ? PS2APIConstants.UnknownWeaponTranslate : weaponName)}{(headshot ? " to HEAD" : "")}";
+            return $"{NameWithOutfit(attacker.Name, attacker.Outfit)}{(attackerVehicle.Name == null ? "" : " in " + attackerVehicle.Name)} playing as {attackerLoadoutName} {(victim.Faction == attacker.Faction ? "team" : "")}killed {NameWithOutfit(victim.Name, victim.Outfit)} playing as {victimLoadoutName}{(weaponName == null ? "" : " with " + weaponName)}{(headshot ? " to HEAD" : "")}";
         }
     }
     sealed class VehicleDestroyedEventRecord : EventRecord
@@ -173,10 +169,6 @@ namespace PlanetsideAPIWebsocket
             {
                 return $"{NameWithOutfit(attacker.Name, attacker.Outfit)} in {attackerVehicle.Name} playing as {attackerLoadoutName} destroyed his own {destroyedVehicle.Name}";
             }
-            if (weaponName == null && attackerVehicle.Name != null)
-            {
-                return $"{NameWithOutfit(attacker.Name, attacker.Outfit)} in {attackerVehicle.Name} playing as {attackerLoadoutName} scrapped {(victim.Faction == attacker.Faction ? "teammate " : "")}{NameWithOutfit(victim.Name, victim.Outfit)}'s {destroyedVehicle.Name}";
-            }
             return $"{NameWithOutfit(attacker.Name, attacker.Outfit)}{(attackerVehicle.Name == null ? "" : " in " + attackerVehicle.Name)} playing as {attackerLoadoutName} destroyed {(victim.Faction == attacker.Faction ? "teammate " : "")}{NameWithOutfit(victim.Name, victim.Outfit)}'s {destroyedVehicle.Name}{(weaponName == null ? "" : " with " + weaponName)}";
         }
     }
@@ -210,6 +202,68 @@ namespace PlanetsideAPIWebsocket
         public override string ToString()
         {
             return $"{character.Name} is ONLINE";
+        }
+    }
+
+    class MinorExperienceEventRecord : EventRecord
+    {
+        public enum ExperienceType
+        {
+            Assist,
+            Resupply,
+            SpotAssist,
+            MAXRepair,
+            Unknown
+        }
+        public NameOutfitFactionRecord character;
+        public NameOutfitFactionRecord other;
+        public ExperienceType type;
+        public static async Task<MinorExperienceEventRecord> Parse(JsonObject json)
+        {
+            MinorExperienceEventRecord record = new MinorExperienceEventRecord();
+            JsonString characterId = json["character_id"] as JsonString;
+            JsonString otherId = json["other_id"] as JsonString;
+            JsonString experienceId = json["experience_id"] as JsonString;
+            JsonString timestamp = json["timestamp"] as JsonString;
+            var characterTask = PS2APIUtils.GetCharacterName(characterId);
+            var otherTask = PS2APIUtils.GetCharacterName(otherId);
+
+            long ts;
+            if (timestamp == null || !long.TryParse(timestamp.InnerString, out ts)) ts = 0;
+            record.timestamp = ts;
+            record.type = GetExperienceType(experienceId?.InnerString);
+
+            await Task.WhenAll(characterTask, otherTask);
+            record.character = await characterTask;
+            record.other = await otherTask;
+            return record;
+
+        }
+
+        public static ExperienceType GetExperienceType(string id)
+        {
+            if (id == null) return ExperienceType.Unknown;
+            switch (id)
+            {
+                case PS2APIConstants.ExperienceIdResupply:
+                case PS2APIConstants.ExperienceIdSquadResupply:
+                    return ExperienceType.Resupply;
+                case PS2APIConstants.ExperienceIdSpotKill:
+                case PS2APIConstants.ExperienceIdSquadSpotKill:
+                    return ExperienceType.SpotAssist;
+                case PS2APIConstants.ExperienceIdMAXRepair:
+                case PS2APIConstants.ExperienceIdSquadMAXRepair:
+                    return ExperienceType.MAXRepair;
+                case PS2APIConstants.ExperienceIdKillAssist:
+                    return ExperienceType.Assist;
+                default:
+                    return ExperienceType.Unknown;
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"{NameWithOutfit(character.Name, character.Outfit)} gained {type} experience{(other.Name != null ? " from " + NameWithOutfit(other.Name, other.Outfit) : "")}";
         }
     }
 }

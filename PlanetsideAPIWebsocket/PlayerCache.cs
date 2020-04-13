@@ -20,6 +20,8 @@ namespace PlanetsideAPIWebsocket
         public static async Task<NameOutfitFactionRecord> GetPlayer(JsonString id)
         {
             NameOutfitFactionRecord record;
+            if (id == null || id.InnerString == "0") return default(NameOutfitFactionRecord);
+
             if (ResolvedPlayers.TryGetValue(id, out record))
             {
                 return record;
