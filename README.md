@@ -1,9 +1,10 @@
 # PlanetsideOutfitTracker
 Usage:
 ------
-`> Tracker.exe <outfit tag>`
+`> Tracker.exe <outfit tag> <sessionname>`
 
-*Example*: `> Tracker.exe DIG`
+*Example*: `> Tracker.exe DIG mysession`
+After gathering is finished (enter is pressed), 2 new files are created containing all recorded events and online player statistics
 
 TODO:
 -----

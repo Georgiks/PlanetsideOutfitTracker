@@ -21,11 +21,13 @@ namespace PlanetsideAPIWebsocket
         JsonString OutfitName { get; }
         CancellationTokenSource tokenSource = new CancellationTokenSource();
         CancellationToken token;
+        FileStream logFileStream;
+        StreamWriter logFileWriter;
 
         Task socketListenTask;
         int eventProcessingsInProgress = 0;
 
-        public OutfitMembersTracker(string alias)
+        public OutfitMembersTracker(string alias, string logfile)
         {
             token = tokenSource.Token;
 
@@ -81,14 +83,20 @@ namespace PlanetsideAPIWebsocket
             {
                 throw new JsonInvalidAccessException("Could not extract outfit info");
             }
+
             Console.WriteLine($"Outfit ID: {OutfitId}");
             Console.WriteLine($"Outfit Name: {OutfitName}");
             Console.WriteLine($"Total members registered: {allMembers.Count}");
             Console.WriteLine($"Online members: {onlineCount}");
             establishSocketTask.GetAwaiter().GetResult();
             WebsocketSendAllSubscribe(allMembers).GetAwaiter().GetResult();
-            Console.WriteLine("Subscribed to all, going to listen...");
+            Console.WriteLine("Subscribed to all");
 
+            logFileStream = new FileStream(logfile + ".csv", FileMode.Create);
+            logFileWriter = new StreamWriter(logFileStream);
+            logFileWriter.WriteLine(EventRecord.LogStringHeader);
+
+            Console.WriteLine("Going to listen...");
             //WebsocketStreamListener().GetAwaiter().GetResult();
             //Task.Run(async () => await WebsocketStreamListener());
             socketListenTask = WebsocketStreamListener();
@@ -174,7 +182,9 @@ namespace PlanetsideAPIWebsocket
                 Thread.Sleep(3000);
             }
             Console.WriteLine("Waiting for remaining events finished!");
-            DumpData();
+            logFileWriter.Dispose();
+            logFileStream.Dispose();
+            //DumpData();
         }
 
         async Task EstablishWebsocketConnection()
@@ -321,19 +331,28 @@ namespace PlanetsideAPIWebsocket
             {
                 Program.Logger.Log(record.ToString(), record.timestamp);
             }
+            if (record != null)
+            {
+                await logFileWriter.WriteLineAsync(record.GetLogString());
+            }
         }
-
+        
         public void DumpData()
         {
-            //Console.WriteLine($"CharacterName;OutfitRank;OnlineTime;KD;kills;teamkills;outfitkills;deaths;teamdeaths;outfitdeaths;revives;squadrevives;outfitrevives;selfrevives;suicides;revived;vehiclesDestroyed;vehiclesLost;vehiclesSelfdestroyed;teamVehicleDestroyed;outfitVehicleDestroyed;headshotKills");
+            Console.WriteLine(GetPlayerStatistics());
+        }
+        
+        public string GetPlayerStatistics()
+        {
+            StringBuilder sb = new StringBuilder();
             string[] statNames = Enum.GetNames(typeof(OutfitMemberStatRecorder.Statistic));
-            ;
-            Console.WriteLine("Name;Rank;Online (minutes);" + string.Join(";", statNames));
+            sb.AppendLine("Name;Rank;Online (minutes);" + string.Join(";", statNames));
             foreach (var i in StatRecorders)
             {
                 if (i.Value.OnlineTime.Ticks == 0) continue;
-                i.Value.PrintMyData();
+                i.Value.AppendData(sb);
             }
+            return sb.ToString();
         }
     }
 
@@ -396,10 +415,16 @@ namespace PlanetsideAPIWebsocket
         }
         public void PrintMyData()
         {
-            var values = Enum.GetValues(typeof(Statistic));
             StringBuilder sb = new StringBuilder();
+            AppendData(sb);
+            Console.Write(sb.ToString());
+            //Console.WriteLine($"{CharacterName};{OutfitRank};{OnlineTime.TotalMinutes};{kills / (float)deaths};{kills};{teamkills};{outfitkills};{deaths};{teamdeaths};{outfitdeaths};{revives};{squadrevives};{outfitrevives};{selfrevives};{suicides};{revived};{vehiclesDestroyed};{vehiclesLost};{vehiclesSelfdestroyed};{teamVehicleDestroyed};{outfitVehicleDestroyed};{headshotKills}");
+        }
+        public void AppendData(StringBuilder sb)
+        {
+            var values = Enum.GetValues(typeof(Statistic));
             sb.Append(CharacterName).Append(';').Append(OutfitRank).Append(';').Append(OnlineTime.TotalMinutes).Append(';');
-            for (int i = 0; i <values.Length; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 if (i > 0) sb.Append(';');
                 var v = (Statistic)values.GetValue(i);
@@ -410,8 +435,7 @@ namespace PlanetsideAPIWebsocket
                 }
                 sb.Append(stat);
             }
-            Console.WriteLine(sb.ToString());
-            //Console.WriteLine($"{CharacterName};{OutfitRank};{OnlineTime.TotalMinutes};{kills / (float)deaths};{kills};{teamkills};{outfitkills};{deaths};{teamdeaths};{outfitdeaths};{revives};{squadrevives};{outfitrevives};{selfrevives};{suicides};{revived};{vehiclesDestroyed};{vehiclesLost};{vehiclesSelfdestroyed};{teamVehicleDestroyed};{outfitVehicleDestroyed};{headshotKills}");
+            sb.AppendLine();
         }
 
         public OutfitMemberStatRecorder(JsonString id, JsonString name, JsonString rank, JsonString outfit)
