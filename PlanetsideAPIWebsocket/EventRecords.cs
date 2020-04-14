@@ -36,12 +36,13 @@ namespace PlanetsideAPIWebsocket
 
         public abstract string GetLogString();
 
-        public static string LogStringHeader = "timestamp;whoFaction;whoOutfit;whoName;whoLoadout;whoVehicle;type;otherFaction;otherOutfit;otherName;otherLoadout;otherVehicle;weapon;headshot";
+        public static string LogStringHeader = "timestamp;time;whoFaction;whoOutfit;whoName;whoLoadout;whoVehicle;type;otherFaction;otherOutfit;otherName;otherLoadout;otherVehicle;weapon;headshot";
         protected static string LogRecordHelper(long timestamp, string type, string whoFaction = null, string whoOutfit = null, string whoName = null, string whoLoadout = null, string whoVehicle = null, string otherFaction = null, string otherOutfit = null, string otherName = null, string otherLoadout = null, string otherVehicle = null, string weapon = null, bool? headshot = null)
         {
             if (whoOutfit != null) whoOutfit = $"[{whoOutfit}]";
             if (otherOutfit != null) otherOutfit = $"[{otherOutfit}]";
-            return $"{timestamp};{whoFaction};{whoOutfit};{whoName};{whoLoadout};{whoVehicle};{type};{otherFaction};{otherOutfit};{otherName};{otherLoadout};{otherVehicle};{weapon};{headshot}";
+            string timeReadable = DateTimeOffset.FromUnixTimeSeconds(timestamp).ToLocalTime().ToString("HH:mm:ss");
+            return $"{timestamp};{timeReadable};{whoFaction};{whoOutfit};{whoName};{whoLoadout};{whoVehicle};{type};{otherFaction};{otherOutfit};{otherName};{otherLoadout};{otherVehicle};{weapon};{headshot}";
         }
     }
 
@@ -244,7 +245,7 @@ namespace PlanetsideAPIWebsocket
         {
             Assist,
             Resupply,
-            SpotAssist,
+            Heal,
             MAXRepair,
             Unknown
         }
@@ -285,13 +286,18 @@ namespace PlanetsideAPIWebsocket
                 case PS2APIConstants.ExperienceIdResupply:
                 case PS2APIConstants.ExperienceIdSquadResupply:
                     return ExperienceType.Resupply;
-                case PS2APIConstants.ExperienceIdSpotKill:
-                case PS2APIConstants.ExperienceIdSquadSpotKill:
-                    return ExperienceType.SpotAssist;
+                case PS2APIConstants.ExperienceIdHeal:
+                case PS2APIConstants.ExperienceIdSquadHeal:
+                    return ExperienceType.Heal;
+                //case PS2APIConstants.ExperienceIdSpotKill:
+                //case PS2APIConstants.ExperienceIdSquadSpotKill:
+                //    return ExperienceType.SpotAssist;
                 case PS2APIConstants.ExperienceIdMAXRepair:
                 case PS2APIConstants.ExperienceIdSquadMAXRepair:
                     return ExperienceType.MAXRepair;
                 case PS2APIConstants.ExperienceIdKillAssist:
+                case PS2APIConstants.ExperienceIdPriorityKillAssist:
+                case PS2APIConstants.ExperienceIdHighPriorityKillAssist:
                     return ExperienceType.Assist;
                 default:
                     return ExperienceType.Unknown;

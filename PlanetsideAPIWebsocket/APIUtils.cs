@@ -23,10 +23,14 @@ namespace PlanetsideAPIWebsocket
         public const string UnknownWeaponTranslate = "deadly view";
         public const string TurretVehicleTypeId = "7";
         public const string ExperienceIdKillAssist = "2";
+        public const string ExperienceIdPriorityKillAssist = "371";
+        public const string ExperienceIdHighPriorityKillAssist = "372";
         public const string ExperienceIdResupply = "34";
+        public const string ExperienceIdHeal = "4";
+        public const string ExperienceIdSquadHeal = "51";
         public const string ExperienceIdSquadResupply = "55";
-        public const string ExperienceIdSpotKill = "36";
-        public const string ExperienceIdSquadSpotKill = "54";
+        //public const string ExperienceIdSpotKill = "36";
+        //public const string ExperienceIdSquadSpotKill = "54";
         public const string ExperienceIdMAXRepair = "6";
         public const string ExperienceIdSquadMAXRepair = "142";
     }

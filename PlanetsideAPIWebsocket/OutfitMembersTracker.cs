@@ -21,7 +21,7 @@ namespace PlanetsideAPIWebsocket
         JsonString OutfitName { get; }
         CancellationTokenSource tokenSource = new CancellationTokenSource();
         CancellationToken token;
-        FileStream logFileStream;
+        Stream logFileStream;
         StreamWriter logFileWriter;
 
         Task socketListenTask;
@@ -92,7 +92,7 @@ namespace PlanetsideAPIWebsocket
             WebsocketSendAllSubscribe(allMembers).GetAwaiter().GetResult();
             Console.WriteLine("Subscribed to all");
 
-            logFileStream = new FileStream(logfile + ".csv", FileMode.Create);
+            logFileStream = Stream.Synchronized(new FileStream(logfile + ".csv", FileMode.Create));
             logFileWriter = new StreamWriter(logFileStream);
             logFileWriter.WriteLine(EventRecord.LogStringHeader);
 
@@ -113,11 +113,15 @@ namespace PlanetsideAPIWebsocket
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadRevive));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdResupply));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadResupply));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdHeal));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadHeal));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdKillAssist));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdPriorityKillAssist));
+            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdHighPriorityKillAssist));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdMAXRepair));
             events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadMAXRepair));
-            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSpotKill));
-            events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadSpotKill));
+            //events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSpotKill));
+            //events.Add(PS2APIConstants.ExpEvent(PS2APIConstants.ExperienceIdSquadSpotKill));
             string subscribeRequest = PS2APIEventUtils.GetSubscribeEvent(new JsonArray(players), new JsonArray(events)).ToString();
             await StreamingAPISocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(subscribeRequest)), WebSocketMessageType.Text, true, CancellationToken.None);
         }
@@ -159,8 +163,14 @@ namespace PlanetsideAPIWebsocket
                         Console.WriteLine("API listening cancelled by user request");
                     }
                 }
-            } catch (OperationCanceledException) {
+                Console.WriteLine(e.Message);
+            } catch (OperationCanceledException e) {
                 Console.WriteLine("API listening cancelled by user request");
+                Console.WriteLine(e.Message);
+            } catch (WebSocketException e)
+            {
+                Console.WriteLine("Receiving from socket failed");
+                Console.WriteLine(e.ToString());
             }
             finally
             {
@@ -327,7 +337,7 @@ namespace PlanetsideAPIWebsocket
                     break;
             }
 
-            if (record != null && !(record is MinorExperienceEventRecord))
+            if (record != null/* && !(record is MinorExperienceEventRecord)*/)
             {
                 Program.Logger.Log(record.ToString(), record.timestamp);
             }
@@ -381,7 +391,8 @@ namespace PlanetsideAPIWebsocket
             OutfitVehiclesDestroyed,
             HeadshotEnemyKills,
             MAXRepairs,
-            SpotAssists,
+            Heals,
+            //SpotAssists,
             ResuppliesPlayer
         }
         Dictionary<Statistic, int> StatsDictionary { get; } = new Dictionary<Statistic, int>();
@@ -553,9 +564,12 @@ namespace PlanetsideAPIWebsocket
                 case MinorExperienceEventRecord.ExperienceType.Resupply:
                     RegisterStatisticChange(Statistic.ResuppliesPlayer);
                     break;
-                case MinorExperienceEventRecord.ExperienceType.SpotAssist:
-                    RegisterStatisticChange(Statistic.SpotAssists);
+                case MinorExperienceEventRecord.ExperienceType.Heal:
+                    RegisterStatisticChange(Statistic.Heals);
                     break;
+                //case MinorExperienceEventRecord.ExperienceType.SpotAssist:
+                //    RegisterStatisticChange(Statistic.SpotAssists);
+                //    break;
                 default:
                     break;
             }

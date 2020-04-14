@@ -8,10 +8,10 @@ After gathering is finished (enter is pressed), 2 new files are created containi
 
 TODO:
 -----
-+ make it more error-proof (reconnect to API stream if connection lost)
-+ ~~__add spot kills and more to tracker__~~ (done)
++ make it more error-proof (reconnect to API stream if connection lost) - now stream is ended
++ ~~__add spot assists and more to tracker__~~ (done - spot assists are unaccessible from game)
 + __add killstreaks, multikills etc. notices__
-+ add cache timeout for players? for long-running program uses
++ ~~add cache timeout for players? for long-running program uses~~ (done - 10 minutes)
 + player online time is not always correct in multithreaded environment (one thread registers him as offline before another thread registers him online with earlier timestamp)
 + hint to playercache to fetch given players at once (all outfit (online) players)
 + __output data from class instead of printing them at end__
