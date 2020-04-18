@@ -185,15 +185,15 @@ namespace PlanetsideAPIWebsocket
         public void FinishGathering()
         {
             tokenSource.Cancel();
-            socketListenTask.GetAwaiter().GetResult();
+            socketListenTask?.GetAwaiter().GetResult();
             while (eventProcessingsInProgress > 0)
             {
                 Console.WriteLine($"Waiting for events to finish: {eventProcessingsInProgress}");
                 Thread.Sleep(3000);
             }
             Console.WriteLine("Waiting for remaining events finished!");
-            logFileWriter.Dispose();
-            logFileStream.Dispose();
+            logFileWriter?.Dispose();
+            logFileStream?.Dispose();
             //DumpData();
         }
 
