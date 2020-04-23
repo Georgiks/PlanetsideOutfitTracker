@@ -114,22 +114,19 @@ namespace PlanetsideAPIWebsocket
             JsonString timestamp = json["timestamp"] as JsonString;
             var characterTask = PS2APIUtils.GetCharacterName(characterId);
             var attackerTask = PS2APIUtils.GetCharacterName(attackerId);
-            var attackerVehicleTask = PS2APIUtils.GetVehicleName(attackerVehicleId);
-            var attackerLoadoutTask = PS2APIUtils.GetLoadoutName(attackerLoadoutId);
-            var victimLoadoutTask = PS2APIUtils.GetLoadoutName(victimLoadoutId);
-            var attackerWeaponTask = PS2APIUtils.GetWeaponName(attackerWeaponId);
+
+            record.attackerVehicle = PS2APIUtils.GetVehicleName(attackerVehicleId);
+            record.attackerLoadoutName = PS2APIUtils.GetLoadoutName(attackerLoadoutId);
+            record.victimLoadoutName = PS2APIUtils.GetLoadoutName(victimLoadoutId);
+            record.weaponName = PS2APIUtils.GetWeaponName(attackerWeaponId);
 
             long ts;
             if (timestamp == null || !long.TryParse(timestamp.InnerString, out ts)) ts = 0;
             record.timestamp = ts;
 
-            await Task.WhenAll(characterTask, attackerTask, attackerVehicleTask, attackerLoadoutTask, victimLoadoutTask, attackerWeaponTask);
+            await Task.WhenAll(characterTask, attackerTask);
             record.victim = await characterTask;
             record.attacker = await attackerTask;
-            record.attackerVehicle = await attackerVehicleTask;
-            record.attackerLoadoutName = await attackerLoadoutTask;
-            record.victimLoadoutName = await victimLoadoutTask;
-            record.weaponName = await attackerWeaponTask;
             record.headshot = headshot == null ? false : headshot.InnerString != "0";
             return record;
         }
@@ -166,22 +163,18 @@ namespace PlanetsideAPIWebsocket
             JsonString timestamp = json["timestamp"] as JsonString;
             var characterTask = PS2APIUtils.GetCharacterName(characterId);
             var attackerTask = PS2APIUtils.GetCharacterName(attackerId);
-            var attackerVehicleTask = PS2APIUtils.GetVehicleName(attackerVehicleId);
-            var destroyedVehicleTask = PS2APIUtils.GetVehicleName(vehicleId);
-            var attackerLoadoutTask = PS2APIUtils.GetLoadoutName(attackerLoadoutId);
-            var attackerWeaponTask = PS2APIUtils.GetWeaponName(attackerWeaponId);
+            record.attackerVehicle = PS2APIUtils.GetVehicleName(attackerVehicleId);
+            record.destroyedVehicle = PS2APIUtils.GetVehicleName(vehicleId);
+            record.attackerLoadoutName = PS2APIUtils.GetLoadoutName(attackerLoadoutId);
+            record.weaponName = PS2APIUtils.GetWeaponName(attackerWeaponId);
 
             long ts;
             if (timestamp == null || !long.TryParse(timestamp.InnerString, out ts)) ts = 0;
             record.timestamp = ts;
 
-            await Task.WhenAll(characterTask, attackerTask, attackerVehicleTask, attackerLoadoutTask, destroyedVehicleTask, attackerWeaponTask);
+            await Task.WhenAll(characterTask, attackerTask);
             record.victim = await characterTask;
             record.attacker = await attackerTask;
-            record.attackerVehicle = await attackerVehicleTask;
-            record.attackerLoadoutName = await attackerLoadoutTask;
-            record.weaponName = await attackerWeaponTask;
-            record.destroyedVehicle = await destroyedVehicleTask;
             return record;
         }
         public override string ToString()
@@ -263,17 +256,16 @@ namespace PlanetsideAPIWebsocket
             JsonString timestamp = json["timestamp"] as JsonString;
             var characterTask = PS2APIUtils.GetCharacterName(characterId);
             var otherTask = PS2APIUtils.GetCharacterName(otherId);
-            var characterLoadoutTask = PS2APIUtils.GetLoadoutName(loadoutId);
+            record.characterLoadout = PS2APIUtils.GetLoadoutName(loadoutId);
 
             long ts;
             if (timestamp == null || !long.TryParse(timestamp.InnerString, out ts)) ts = 0;
             record.timestamp = ts;
             record.type = GetExperienceType(experienceId?.InnerString);
 
-            await Task.WhenAll(characterTask, otherTask, characterLoadoutTask);
+            await Task.WhenAll(characterTask, otherTask);
             record.character = await characterTask;
             record.other = await otherTask;
-            record.characterLoadout = await characterLoadoutTask;
             return record;
 
         }

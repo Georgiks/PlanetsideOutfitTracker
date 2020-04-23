@@ -10,7 +10,7 @@ namespace PlanetsideAPIWebsocket
 {
     static class PlayerCache
     {
-        private static TimeSpan cacheTimeoutMinutes = TimeSpan.FromMinutes(2);
+        private static TimeSpan cacheTimeoutMinutes = TimeSpan.FromMinutes(10);
         struct CacheStruct
         {
             public DateTime cachedTime;
@@ -65,7 +65,8 @@ namespace PlanetsideAPIWebsocket
                     }
 
                     NameOutfitFactionRecord record = await FetchPlayerInfo(id);
-                    if (record.Name != null && record.Faction != null)
+
+                    if (!record.Name.StartsWith("<") && !record.Faction.StartsWith("<"))
                     {
                         cacheItem.cachedTime = DateTime.Now;
                         cacheItem.cachedValue = record;
@@ -93,7 +94,14 @@ namespace PlanetsideAPIWebsocket
         }
         static private async Task<NameOutfitFactionRecord> FetchPlayerInfo(JsonString id)
         {
-            var json = await PS2APIUtils.RestAPIRequest($@"http://census.daybreakgames.com/s:georgik/get/ps2/character_name/?character_id={id.InnerString}&c:join=character^inject_at:character^show:faction_id(outfit_member_extended^inject_at:outfit^show:alias%27name)");
+            JsonObject json;
+            int retry = 0;
+            do
+            {
+                string uri = $@"http://census.daybreakgames.com/s:georgik/get/ps2/character_name/?character_id={id.InnerString}&c:join=character^inject_at:character^show:faction_id(outfit_member_extended^inject_at:outfit^show:alias%27name)";
+                json = await PS2APIUtils.RestAPIRequest(uri, timeoutMs: 5000);
+
+            } while (json == null && ++retry < 3);
             NameOutfitFactionRecord record = new NameOutfitFactionRecord();
             if ((record.Name = (json?["character_name_list"]?[0]?["name"]?["first"] as JsonString)?.InnerString) == null)
             {

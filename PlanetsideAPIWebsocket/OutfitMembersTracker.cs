@@ -22,7 +22,7 @@ namespace PlanetsideAPIWebsocket
         CancellationTokenSource tokenSource = new CancellationTokenSource();
         CancellationToken token;
         Stream logFileStream;
-        StreamWriter logFileWriter;
+        TextWriter logFileWriter;
 
         Task socketListenTask;
         int eventProcessingsInProgress = 0;
@@ -89,11 +89,12 @@ namespace PlanetsideAPIWebsocket
             Console.WriteLine($"Total members registered: {allMembers.Count}");
             Console.WriteLine($"Online members: {onlineCount}");
             establishSocketTask.GetAwaiter().GetResult();
-            WebsocketSendAllSubscribe(allMembers).GetAwaiter().GetResult();
+            WebsocketSendSubscribeAll(allMembers).GetAwaiter().GetResult();
             Console.WriteLine("Subscribed to all");
 
-            logFileStream = Stream.Synchronized(new FileStream(logfile + ".csv", FileMode.Create));
-            logFileWriter = new StreamWriter(logFileStream);
+            logFileStream = new FileStream(logfile + ".csv", FileMode.Create);
+            logFileWriter = TextWriter.Synchronized(new StreamWriter(logFileStream));
+            //logFileWriter = new StreamWriter(logFileStream);
             logFileWriter.WriteLine(EventRecord.LogStringHeader);
 
             Console.WriteLine("Going to listen...");
@@ -102,7 +103,7 @@ namespace PlanetsideAPIWebsocket
             socketListenTask = WebsocketStreamListener();
         }
 
-        async Task WebsocketSendAllSubscribe(List<JsonObject> players)
+        async Task WebsocketSendSubscribeAll(List<JsonObject> players)
         {
             List<JsonObject> events = new List<JsonObject>();
             events.Add(new JsonString("Death"));
@@ -147,10 +148,12 @@ namespace PlanetsideAPIWebsocket
                         ms.Seek(0, SeekOrigin.Begin);
 
                         var msg = JsonObject.ParseFromStream(ms);
-                        Interlocked.Increment(ref eventProcessingsInProgress);
+
+                        StartProcessMsg(msg);
+                        //Interlocked.Increment(ref eventProcessingsInProgress);
                         // Without void return method, compiler is complaining, but I need it so I can make ContinueWith task
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        ProcessEventMessage(msg).ContinueWith((task) => Interlocked.Decrement(ref eventProcessingsInProgress));
+                        //ProcessEventMessage(msg).ContinueWith((task) => Interlocked.Decrement(ref eventProcessingsInProgress));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     }
                 }
@@ -160,7 +163,7 @@ namespace PlanetsideAPIWebsocket
                 {
                     if (i is TaskCanceledException || i is OperationCanceledException)
                     {
-                        Console.WriteLine("API listening cancelled by user request");
+                        Console.WriteLine("API listening cancelled by user request (Aggregate)");
                     }
                 }
                 Console.WriteLine(e.Message);
@@ -182,14 +185,58 @@ namespace PlanetsideAPIWebsocket
 
         }
 
+        async void StartProcessMsg(JsonObject msg) 
+        {
+            int timeout = 30_000;
+            Interlocked.Increment(ref eventProcessingsInProgress);
+            try
+            {
+                Task t = ProcessEventMessage(msg);
+                if (await Task.WhenAny(t, Task.Delay(timeout)) == t)
+                {
+                    await t;
+                }
+                else
+                {
+                    Console.WriteLine("Task timed out!");
+                    Console.WriteLine(msg.ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Task threw exception!");
+                Console.WriteLine(e);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref eventProcessingsInProgress);
+            }
+        }
+
         public void FinishGathering()
         {
             tokenSource.Cancel();
             socketListenTask?.GetAwaiter().GetResult();
+            long lastInProgress = eventProcessingsInProgress;
+            int pendingTimeout = 0;
             while (eventProcessingsInProgress > 0)
             {
                 Console.WriteLine($"Waiting for events to finish: {eventProcessingsInProgress}");
                 Thread.Sleep(3000);
+
+                if (eventProcessingsInProgress == lastInProgress)
+                {
+                    pendingTimeout++;
+                    if (pendingTimeout >= 6)
+                    {
+                        Console.WriteLine("Waiting timed out!");
+                        break;
+                    }
+                } else
+                {
+                    pendingTimeout = 0;
+                    lastInProgress = eventProcessingsInProgress;
+                }
             }
             Console.WriteLine("Waiting for remaining events finished!");
             logFileWriter?.Dispose();
