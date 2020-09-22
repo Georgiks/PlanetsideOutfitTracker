@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace PlanetsideAPIWebsocket
 {
+    /// <summary>
+    /// One-time vehicle information cache
+    /// </summary>
     static class VehicleCache
     {
 
@@ -14,7 +17,8 @@ namespace PlanetsideAPIWebsocket
         static VehicleCache()
         {
             Console.WriteLine("Vehicle cache loading...");
-            string allVehiclesRequest = @"https://census.daybreakgames.com/s:georgik/get/ps2/vehicle/?c:limit=100&c:show=vehicle_id,type_id,name";
+            // get all vehicles' info and save them to dictionary
+            string allVehiclesRequest = $@"https://census.daybreakgames.com/s:{PS2APIConstants.ServiceId}/get/ps2/vehicle/?c:limit=100&c:show=vehicle_id,type_id,name";
             JsonObject json = PS2APIUtils.RestAPIRequest(allVehiclesRequest).GetAwaiter().GetResult();
             var vehicles = json?["vehicle_list"] as JsonArray;
             if (vehicles == null) return;

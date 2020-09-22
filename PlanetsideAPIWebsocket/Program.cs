@@ -14,33 +14,50 @@ namespace PlanetsideAPIWebsocket
 {
     class Program
     {
+        // simple logger instance
         public static Logger Logger { get; } = new Logger();
+
+
         static void Main(string[] args)
         {
             if (args.Length != 2)
             {
-                Console.WriteLine("Usage:\n  [cmd] <outfit_alias> <all_events_logfile>");
+                Console.WriteLine("Usage:\n  [cmd] <outfit_alias> <session_name>");
                 return;
             }
+
             // ensure DatabaseCache singleton is created in safe non-threaded environment
             InitiateCaches();
 
             try
             {
-                var tracker = new OutfitMembersTracker(args[0], args[1]);
-                Console.WriteLine("Waiting for enter...");
-                Console.ReadLine();
-                tracker.FinishGathering();
 
-                string statsFileName = args[1] + "_stats.csv";
-                Console.WriteLine("Writing statistics to " + statsFileName);
-                File.WriteAllText(statsFileName, tracker.GetPlayerStatistics());
-                Console.WriteLine("Statistics written!");
-            }
-            catch (JsonException e)
-            {
-                Console.WriteLine(e.Message);
-                throw;
+                List<IPlugin> plugins = PluginsManager.GetAvailablePlugins();
+                Console.WriteLine("Found plugins: " + plugins.Count);
+
+                // create tracker - that fill fetch all outfit information including list of members
+                var tracker = new OutfitMembersTracker(args[0], args[1]);
+
+                // initiate plugins
+                foreach (var plugin in plugins)
+                {
+                    plugin.Init(tracker, args[1]);
+                }
+                // start the streaming websocket
+                tracker.StartListening();
+
+                Console.WriteLine("Press ENTER to finish tracking...");
+                Console.ReadLine();
+
+                // end tracking, close streaming websocket and wait for all events processings in progress
+                tracker.Finish();
+                
+                // inform plugins that tracking has ended
+                foreach (var plugin in plugins)
+                {
+                    plugin.TrackingEnded();
+                }
+
             } catch (Exception e)
             {
                 Console.WriteLine(e.Message);
@@ -50,6 +67,10 @@ namespace PlanetsideAPIWebsocket
 
 
         }
+
+        /// <summary>
+        /// Construct caches
+        /// </summary>
         public static void InitiateCaches()
         {
             var t1 = Task.Run(() => RuntimeHelpers.RunClassConstructor(typeof(PlayerCache).TypeHandle));

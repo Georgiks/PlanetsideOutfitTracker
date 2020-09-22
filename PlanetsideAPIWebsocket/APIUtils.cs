@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,7 +21,6 @@ namespace PlanetsideAPIWebsocket
         public const string MillerWorld = "10";
         public const string ExperienceIdRevive = "7";
         public const string ExperienceIdSquadRevive = "53";
-        public const string UnknownWeaponTranslate = "deadly view";
         public const string TurretVehicleTypeId = "7";
         public const string ExperienceIdKillAssist = "2";
         public const string ExperienceIdPriorityKillAssist = "371";
@@ -29,18 +29,55 @@ namespace PlanetsideAPIWebsocket
         public const string ExperienceIdHeal = "4";
         public const string ExperienceIdSquadHeal = "51";
         public const string ExperienceIdSquadResupply = "55";
+        // spot experience events behave weird and are useless
         //public const string ExperienceIdSpotKill = "36";
         //public const string ExperienceIdSquadSpotKill = "54";
         public const string ExperienceIdMAXRepair = "6";
         public const string ExperienceIdSquadMAXRepair = "142";
+
+        public const string UnknownWeaponTranslate = "deadly view";
     }
 
+    /// <summary>
+    /// Function for working with the PS2 REST API
+    /// </summary>
     public static class PS2APIUtils
     {
+        private static HttpClient client = new HttpClient();
+
+        /// <summary>
+        /// Request data from given Rest API URL using HttpClient
+        /// </summary>
+        /// <returns>Data if request was successful or null if it was not</returns>
+        public static async Task<JsonObject> RestAPIRequestClient(string uriString)
+        {
+            try
+            {
+                string r = await client.GetStringAsync(uriString);
+
+                using (MemoryStream ms = new MemoryStream())
+                using (StreamWriter wr = new StreamWriter(ms))
+                {
+                    wr.Write(r);
+                    wr.Flush();
+
+                    ms.Position = 0;
+                    return JsonObject.ParseFromStream(ms);
+                }
+            } catch (HttpRequestException e)
+            {
+                Console.WriteLine($"Request failed: {e.Message} - {uriString}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Request data from given Rest API URL using WebRequest
+        /// </summary>
+        /// <param name="timeoutMs">Timeout for given request</param>
+        /// <returns>Data if request was successful or null if it was not</returns>
         public static async Task<JsonObject> RestAPIRequest(string uriString, int timeoutMs = 15000)
         {
-            StringBuilder debugSB = new StringBuilder();
-            
             Uri uri = new Uri(uriString);
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(uri);
 
@@ -97,10 +134,17 @@ namespace PlanetsideAPIWebsocket
             }
         }
 
+        /// <summary>
+        /// Gets character name by his Id from game database with caching
+        /// </summary>
         public static async Task<NameOutfitFactionRecord> GetCharacterName(JsonString id)
         {
             return await PlayerCache.GetPlayer(id);
         }
+
+        /// <summary>
+        /// Gets vehicle name from vehicle Id from game database with caching
+        /// </summary>
         public static VehicleRecord GetVehicleName(JsonString id)
         {
             if (id != null && id.InnerString != "0")
@@ -114,6 +158,10 @@ namespace PlanetsideAPIWebsocket
             }
             return new VehicleRecord() { Id = id };
         }
+
+        /// <summary>
+        /// Gets loadout name by its Id from game database with caching
+        /// </summary>
         public static string GetLoadoutName(JsonString id)
         {
             if (id != null && id.InnerString != "0")
@@ -127,6 +175,10 @@ namespace PlanetsideAPIWebsocket
             }
             return null;
         }
+
+        /// <summary>
+        /// Gets weapon name by its Id from game database with caching
+        /// </summary>
         public static string GetWeaponName(JsonString id)
         {
             if (id != null && id.InnerString != "0")

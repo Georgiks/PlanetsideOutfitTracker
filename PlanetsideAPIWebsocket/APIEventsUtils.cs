@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 
 namespace PlanetsideAPIWebsocket
 {
-
+    /// <summary>
+    /// Various utility methods for working with PS2 websocket API
+    /// </summary>
     public static class PS2APIEventUtils
     {
         private static void FillAdditionalInfo(Dictionary<JsonString, JsonObject> dict, JsonArray characters, JsonArray events, JsonArray worlds)
@@ -16,6 +18,10 @@ namespace PlanetsideAPIWebsocket
             if (events != null) dict.Add(new JsonString("eventNames"), events);
             if (worlds != null) dict.Add(new JsonString("worlds"), worlds);
         }
+
+        /// <summary>
+        /// Creates JsonObject for subscribing to given events for given players and/or worlds
+        /// </summary>
         public static JsonClass GetSubscribeEvent(JsonArray characters = null, JsonArray events = null, JsonArray worlds = null)
         {
             var dict = new Dictionary<JsonString, JsonObject>();
@@ -24,6 +30,10 @@ namespace PlanetsideAPIWebsocket
             FillAdditionalInfo(dict, characters, events, worlds);
             return new JsonClass(dict);
         }
+
+        /// <summary>
+        /// Creates JsonObject for unsubscribing from given events
+        /// </summary>
         public static JsonClass GetUnsubscribeEvent(JsonArray characters = null, JsonArray events = null, JsonArray worlds = null)
         {
             var dict = new Dictionary<JsonString, JsonObject>();
@@ -32,6 +42,10 @@ namespace PlanetsideAPIWebsocket
             FillAdditionalInfo(dict, characters, events, worlds);
             return new JsonClass(dict);
         }
+
+        /// <summary>
+        /// Creates JsonObject for unsubscribing from all events
+        /// </summary>
         public static JsonClass GetUnsubscribeAllEvent(JsonArray characters = null, JsonArray events = null, JsonArray worlds = null)
         {
             var dict = new Dictionary<JsonString, JsonObject>();

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace PlanetsideAPIWebsocket
 {
+    /// <summary>
+    /// Simple Console logger for writing information with timestamp
+    /// </summary>
     class Logger
     {
         public Logger()

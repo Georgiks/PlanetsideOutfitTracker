@@ -7,14 +7,19 @@ using System.Threading.Tasks;
 
 namespace PlanetsideAPIWebsocket
 {
+    /// <summary>
+    /// One-time cache for loadout names
+    /// </summary>
     static class LoadoutCache
     {
 
         static Dictionary<JsonString, JsonString> LoadoutIdToName { get; } = new Dictionary<JsonString, JsonString>();
+
         static LoadoutCache()
         {
             Console.WriteLine("Loadout cache loading...");
-            string allLoadoutsRequest = @"http://census.daybreakgames.com/s:georgik/get/ps2/loadout/?c:limit=100&c:show=loadout_id,profile_id&c:join=profile^on:profile_id^show:name^inject_at:profile";
+            // get all loadout names and save it to dictionary
+            string allLoadoutsRequest = $@"http://census.daybreakgames.com/s:{PS2APIConstants.ServiceId}/get/ps2/loadout/?c:limit=100&c:show=loadout_id,profile_id&c:join=profile^on:profile_id^show:name^inject_at:profile";
             JsonObject json = PS2APIUtils.RestAPIRequest(allLoadoutsRequest).GetAwaiter().GetResult();
             var loadouts = json?["loadout_list"] as JsonArray;
             if (loadouts == null) return;

@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace PlanetsideAPIWebsocket
 {
+    /// <summary>
+    /// One-time cache for weapon names received from game's databse
+    /// </summary>
     static class WeaponsCache
     {
 
@@ -14,6 +17,7 @@ namespace PlanetsideAPIWebsocket
         static WeaponsCache()
         {
             Console.WriteLine("Weapons cache loading...");
+            // get all weapons' names and save them to dictionary
             string allWeaponsRequest = @"https://census.daybreakgames.com/s:georgik/get/ps2/item_to_weapon/?c:limit=2000&c:join=item^show:name^inject_at:item";
             JsonObject json = PS2APIUtils.RestAPIRequest(allWeaponsRequest).GetAwaiter().GetResult();
             var weapons = json?["item_to_weapon_list"] as JsonArray;

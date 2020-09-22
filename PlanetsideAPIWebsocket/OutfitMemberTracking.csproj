@@ -4,16 +4,17 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{81F73EC0-3F2C-49AF-B9B7-EE8F7E3302F0}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>JsonParser</RootNamespace>
-    <AssemblyName>JsonParser</AssemblyName>
+    <ProjectGuid>{38D35714-7955-4F36-A11B-C6AA5F8DC42B}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PlanetsideAPIWebsocket</RootNamespace>
+    <AssemblyName>OutfitMemberTracking</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,12 +24,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>none</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -41,12 +44,29 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="JsonArray.cs" />
-    <Compile Include="JsonClass.cs" />
-    <Compile Include="JsonExceptions.cs" />
-    <Compile Include="JsonObject.cs" />
-    <Compile Include="JsonPrimitives.cs" />
+    <Compile Include="APIEventsUtils.cs" />
+    <Compile Include="APIUtils.cs" />
+    <Compile Include="EventRecords.cs" />
+    <Compile Include="IEventRecordHandler.cs" />
+    <Compile Include="IPlugin.cs" />
+    <Compile Include="Logger.cs" />
+    <Compile Include="OutfitMembersTracker.cs" />
+    <Compile Include="PlayerCache.cs" />
+    <Compile Include="PluginsManager.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="LoadoutCache.cs" />
+    <Compile Include="VehicleCache.cs" />
+    <Compile Include="WeaponsCache.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JsonParser\JsonParser.csproj">
+      <Project>{81f73ec0-3f2c-49af-b9b7-ee8f7e3302f0}</Project>
+      <Name>JsonParser</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

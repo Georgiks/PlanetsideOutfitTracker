@@ -25,35 +25,55 @@ namespace PlanetsideAPIWebsocket
         }
     }
 
-    abstract class EventRecord
+    /// <summary>
+    /// Abstract parent of all types of events that are received during tracking
+    /// </summary>
+    public abstract class EventRecord
     {
         public long timestamp;
 
+        /// <summary>
+        /// Returns standardized way of formatting player's name together with outfit tag
+        /// </summary>
+        /// <param name="name">Player's name</param>
+        /// <param name="outfit">Outfit tag</param>
         public static string NameWithOutfit(string name, string outfit)
         {
             return (outfit == null ? "" : "[" + outfit + "]") + (name == null ? "<not found>" : name);
         }
 
+        /// <summary>
+        /// Gets string representing this event for csv output.
+        /// Use of <see cref="LogRecordHelper"/> is very advised
+        /// </summary>
         public abstract string GetLogString();
 
-        public static string LogStringHeader = "timestamp;time;whoFaction;whoOutfit;whoName;whoLoadout;whoVehicle;type;otherFaction;otherOutfit;otherName;otherLoadout;otherVehicle;weapon;headshot";
+        /// <summary>
+        /// The header for csv output, all strings from <see cref="GetLogString"/> must follow this format
+        /// </summary>
+        public static string LogStringHeader = "timestamp,time,whoFaction,whoOutfit,whoName,whoLoadout,whoVehicle,type,otherFaction,otherOutfit,otherName,otherLoadout,otherVehicle,weapon,headshot";
+        /// <summary>
+        /// Helper method for generating csv record of this event
+        /// </summary>
         protected static string LogRecordHelper(long timestamp, string type, string whoFaction = null, string whoOutfit = null, string whoName = null, string whoLoadout = null, string whoVehicle = null, string otherFaction = null, string otherOutfit = null, string otherName = null, string otherLoadout = null, string otherVehicle = null, string weapon = null, bool? headshot = null)
         {
             if (whoOutfit != null) whoOutfit = $"[{whoOutfit}]";
             if (otherOutfit != null) otherOutfit = $"[{otherOutfit}]";
             string timeReadable = DateTimeOffset.FromUnixTimeSeconds(timestamp).ToLocalTime().ToString("HH:mm:ss");
-            return $"{timestamp};{timeReadable};{whoFaction};{whoOutfit};{whoName};{whoLoadout};{whoVehicle};{type};{otherFaction};{otherOutfit};{otherName};{otherLoadout};{otherVehicle};{weapon};{headshot}";
+            return $"{timestamp},{timeReadable},{whoFaction},{whoOutfit},{whoName},{whoLoadout},{whoVehicle},{type},{otherFaction},{otherOutfit},{otherName},{otherLoadout},{otherVehicle},{weapon},{headshot}";
         }
     }
 
-    abstract class ReviveEventRecord : EventRecord
+    public sealed class ReviveEventRecord : EventRecord
     {
         public NameOutfitFactionRecord reviver;
         public NameOutfitFactionRecord revived;
+        public bool squad;
 
-        public static async Task<T> Parse<T>(JsonObject json) where T : ReviveEventRecord, new()
+        public static async Task<ReviveEventRecord> Parse(JsonObject json, bool squad)
         {
-            T record = new T();
+            ReviveEventRecord record = new ReviveEventRecord();
+            record.squad = squad;
             JsonString characterId = json["character_id"] as JsonString;
             JsonString otherId = json["other_id"] as JsonString;
             JsonString timestamp = json["timestamp"] as JsonString;
@@ -70,28 +90,18 @@ namespace PlanetsideAPIWebsocket
             return record;
         }
 
+        public override string ToString()
+        {
+            return $"{NameWithOutfit(reviver.Name, reviver.Outfit)} revived {(squad ? "squadmate " : "")}{NameWithOutfit(revived.Name, revived.Outfit)}";
+        }
+
         public override string GetLogString()
         {
             return LogRecordHelper(timestamp, "Revived", whoFaction: reviver.Faction, whoOutfit: reviver.Outfit, whoName: reviver.Name, otherFaction: revived.Faction, otherOutfit: revived.Outfit, otherName: revived.Name);
         }
     }
-    sealed class NonSquadReviveEventRecord : ReviveEventRecord
-    {
 
-        public override string ToString()
-        {
-            return $"{NameWithOutfit(reviver.Name, reviver.Outfit)} revived {NameWithOutfit(revived.Name, revived.Outfit)}";
-        }
-    }
-    sealed class SquadReviveEventRecord : ReviveEventRecord
-    {
-        public override string ToString()
-        {
-            return $"{NameWithOutfit(reviver.Name,reviver.Outfit)} revived squadmate {NameWithOutfit(revived.Name, revived.Outfit)}";
-        }
-    }
-
-    sealed class KillEventRecord : EventRecord
+    public sealed class KillEventRecord : EventRecord
     {
         public NameOutfitFactionRecord attacker;
         public NameOutfitFactionRecord victim;
@@ -143,7 +153,7 @@ namespace PlanetsideAPIWebsocket
             return LogRecordHelper(timestamp, "Killed", whoFaction: attacker.Faction, whoOutfit: attacker.Outfit, whoName: attacker.Name, whoLoadout: attackerLoadoutName, whoVehicle: attackerVehicle.Name, otherFaction: victim.Faction, otherOutfit: victim.Outfit, otherName: victim.Name, otherLoadout: victimLoadoutName, headshot: headshot, weapon: weaponName);
         }
     }
-    sealed class VehicleDestroyedEventRecord : EventRecord
+    public sealed class VehicleDestroyedEventRecord : EventRecord
     {
         public NameOutfitFactionRecord attacker;
         public NameOutfitFactionRecord victim;
@@ -191,7 +201,7 @@ namespace PlanetsideAPIWebsocket
             return LogRecordHelper(timestamp, "Destroyed", whoFaction: attacker.Faction, whoOutfit: attacker.Outfit, whoName: attacker.Name, whoLoadout: attackerLoadoutName, whoVehicle: attackerVehicle.Name, otherFaction: victim.Faction, otherOutfit: victim.Outfit, otherName: victim.Name, otherVehicle: destroyedVehicle.Name, weapon: weaponName);
         }
     }
-    abstract class PlayerLoggingEventRecord : EventRecord
+    public abstract class PlayerLoggingEventRecord : EventRecord
     {
         public NameOutfitFactionRecord character;
         public static async Task<T> Parse<T>(JsonObject json) where T : PlayerLoggingEventRecord, new()
@@ -209,7 +219,7 @@ namespace PlanetsideAPIWebsocket
             return record;
         }
     }
-    sealed class PlayerLogoutEventRecord : PlayerLoggingEventRecord
+    public sealed class PlayerLogoutEventRecord : PlayerLoggingEventRecord
     {
         public override string ToString()
         {
@@ -220,7 +230,7 @@ namespace PlanetsideAPIWebsocket
             return LogRecordHelper(timestamp, "Logged out", whoFaction: character.Faction, whoOutfit: character.Outfit, whoName: character.Name);
         }
     }
-    sealed class PlayerLoginEventRecord : PlayerLoggingEventRecord
+    public sealed class PlayerLoginEventRecord : PlayerLoggingEventRecord
     {
         public override string ToString()
         {
@@ -232,7 +242,7 @@ namespace PlanetsideAPIWebsocket
         }
     }
 
-    class MinorExperienceEventRecord : EventRecord
+    public class MinorExperienceEventRecord : EventRecord
     {
         public enum ExperienceType
         {
@@ -281,9 +291,6 @@ namespace PlanetsideAPIWebsocket
                 case PS2APIConstants.ExperienceIdHeal:
                 case PS2APIConstants.ExperienceIdSquadHeal:
                     return ExperienceType.Heal;
-                //case PS2APIConstants.ExperienceIdSpotKill:
-                //case PS2APIConstants.ExperienceIdSquadSpotKill:
-                //    return ExperienceType.SpotAssist;
                 case PS2APIConstants.ExperienceIdMAXRepair:
                 case PS2APIConstants.ExperienceIdSquadMAXRepair:
                     return ExperienceType.MAXRepair;
